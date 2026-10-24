@@ -6,62 +6,67 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// Sync key format: 4 uppercase alphanumeric + "-" + 4 uppercase alphanumeric
-// e.g. "ABCD-1234"
 const KEY_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 
-export default async function handler(req) {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: CORS });
+export const handler = async (event, context) => {
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 200, headers: CORS, body: "" };
   }
 
-  const url = new URL(req.url);
-  const key = url.searchParams.get("key");
-
+  const key = event.queryStringParameters?.key;
   if (!key || !KEY_RE.test(key)) {
-    return new Response(
-      JSON.stringify({ error: "Invalid key — format: XXXX-XXXX" }),
-      { status: 400, headers: { "Content-Type": "application/json", ...CORS } }
-    );
+    return {
+      statusCode: 400,
+      headers: { "Content-Type": "application/json", ...CORS },
+      body: JSON.stringify({ error: "Invalid key — format: XXXX-XXXX" }),
+    };
   }
 
-  const store = getStore("mtg-wishlist");
+  const store = getStore({ name: "mtg-wishlist", context });
 
-  // ── GET: Daten laden ─────────────────────────────────────────────
-  if (req.method === "GET") {
+  // ── GET ─────────────────────────────────────────────────────────────
+  if (event.httpMethod === "GET") {
     try {
       const data = await store.get(key, { type: "text" });
-      return new Response(data ?? "null", {
+      return {
+        statusCode: 200,
         headers: { "Content-Type": "application/json", ...CORS },
-      });
+        body: data ?? "null",
+      };
     } catch {
-      return new Response("null", {
+      return {
+        statusCode: 200,
         headers: { "Content-Type": "application/json", ...CORS },
-      });
+        body: "null",
+      };
     }
   }
 
-  // ── POST: Daten speichern ────────────────────────────────────────
-  if (req.method === "POST") {
-    const body = await req.text();
+  // ── POST ─────────────────────────────────────────────────────────────
+  if (event.httpMethod === "POST") {
+    const body = event.body || "";
     if (body.length > 4_000_000) {
-      return new Response(
-        JSON.stringify({ error: "Payload too large (max 4 MB)" }),
-        { status: 413, headers: { "Content-Type": "application/json", ...CORS } }
-      );
+      return {
+        statusCode: 413,
+        headers: { "Content-Type": "application/json", ...CORS },
+        body: JSON.stringify({ error: "Payload too large (max 4 MB)" }),
+      };
     }
     try {
       await store.set(key, body);
-      return new Response(JSON.stringify({ ok: true }), {
+      return {
+        statusCode: 200,
         headers: { "Content-Type": "application/json", ...CORS },
-      });
+        body: JSON.stringify({ ok: true }),
+      };
     } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), {
-        status: 500,
+      return {
+        statusCode: 500,
         headers: { "Content-Type": "application/json", ...CORS },
-      });
+        body: JSON.stringify({ error: e.message }),
+      };
     }
   }
 
-  return new Response("Method not allowed", { status: 405, headers: CORS });
-}
+  return { statusCode: 405, headers: CORS, body: "Method not allowed" };
+};
