@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>MTG Wunschliste</title>
+<style>
+:root {
+  --bg:      #0f172a;
+  --surf:    #1e293b;
+  --surf2:   #263346;
+  --bdr:     #334155;
+  --text:    #f1f5f9;
+  --muted:   #94a3b8;
+  --accent:  #6366f1;
+  --accent2: #818cf8;
+  --green:   #22c55e;
+  --foil:    #f59e0b;
+  --red:     #ef4444;
+  --r:       9px;
+  --hdr-h:   0px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 2rem);
+  overscroll-behavior:none;min-height:100dvh;
+}
+
+/* ── UPLOAD SCREEN ─────────────────────────────────────────────────── */
+#upload-screen{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100dvh;padding:2rem 1.5rem;gap:1.5rem;text-align:center;
+}
+#upload-screen h1{font-size:1.6rem;font-weight:700;color:var(--accent2)}
+#upload-screen p{color:var(--muted);font-size:0.9rem;max-width:300px;line-height:1.5}
+.drop-zone{
+  width:100%;max-width:340px;border:2px dashed var(--bdr);border-radius:16px;
+  padding:2.5rem 1.5rem;cursor:pointer;transition:border-color .15s,background .15s;
+  position:relative;
+}
+.drop-zone.over{border-color:var(--accent);background:rgba(99,102,241,.06)}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-zone .icon{font-size:2.5rem;margin-bottom:.6rem}
+.drop-zone p{font-size:.85rem;color:var(--muted)}
+.drop-zone p strong{color:var(--text)}
+.hint{font-size:.72rem;color:var(--muted);max-width:300px;line-height:1.6}
+.hint a{color:var(--accent2);text-decoration:none}
+
+/* ── PROGRESS ─────────────────────────────────────────────────────── */
+#progress-screen{
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100dvh;padding:2rem;gap:1rem;text-align:center;
+}
+.prog-title{font-size:1rem;font-weight:600;color:var(--accent2)}
+.prog-sub{font-size:.8rem;color:var(--muted)}
+.prog-bar-wrap{width:260px;height:6px;background:var(--bdr);border-radius:3px;overflow:hidden}
+.prog-bar{height:100%;background:var(--accent);border-radius:3px;width:0%;transition:width .3s}
+
+/* ── HEADER ───────────────────────────────────────────────────────── */
+#app-screen{display:none;flex-direction:column}
+header{
+  background:var(--surf);border-bottom:1px solid var(--bdr);
+  padding:.9rem 1rem .7rem;
+  padding-top:calc(env(safe-area-inset-top,0px) + .9rem);
+  position:sticky;top:0;z-index:300;
+}
+.hd-row{display:flex;align-items:center;gap:.5rem}
+header h1{font-size:1.1rem;font-weight:700;color:var(--accent2);flex:1}
+.hd-info{font-size:.68rem;color:var(--muted);white-space:nowrap}
+.icon-btn{
+  background:transparent;border:1px solid var(--bdr);color:var(--muted);
+  border-radius:8px;padding:.3rem .45rem;font-size:.9rem;cursor:pointer;
+  transition:all .12s;flex-shrink:0;
+}
+.icon-btn:active{background:var(--surf2)}
+.search-wrap{margin-top:.5rem;position:relative}
+#search{
+  width:100%;background:var(--bg);border:1px solid var(--bdr);
+  border-radius:8px;color:var(--text);font-size:.9rem;
+  padding:.42rem .75rem .42rem 2rem;outline:none;-webkit-appearance:none;
+}
+#search:focus{border-color:var(--accent)}
+.search-ico{position:absolute;left:.55rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.78rem;pointer-events:none}
+
+/* ── SYNC DOT ─────────────────────────────────────────────────────── */
+.sync-dot{
+  font-size:.55rem;cursor:default;user-select:none;
+  transition:color .4s;color:var(--muted);line-height:1;flex-shrink:0;
+}
+
+/* ── FILTER + NAV ─────────────────────────────────────────────────── */
+.filter-bar,.nav-bar{
+  display:flex;gap:.35rem;padding:.45rem 1rem;
+  background:var(--surf);border-bottom:1px solid var(--bdr);
+  position:sticky;z-index:298;overflow-x:auto;scrollbar-width:none;
+}
+.filter-bar::-webkit-scrollbar,.nav-bar::-webkit-scrollbar{display:none}
+.filter-bar{top:var(--hdr-h,97px)}
+.nav-bar{top:calc(var(--hdr-h,97px) + 39px)}
+.pill{
+  flex-shrink:0;background:transparent;border:1px solid var(--bdr);
+  color:var(--muted);font-size:.68rem;padding:.26rem .6rem;
+  border-radius:999px;cursor:pointer;white-space:nowrap;transition:all .12s;
+  text-decoration:none;
+}
+.pill.active,.pill:active{background:var(--accent);border-color:var(--accent);color:#fff}
+.pill .cnt{
+  background:rgba(255,255,255,.15);padding:.02rem .25rem;
+  border-radius:999px;font-size:.6rem;margin-left:.15rem;
+}
+
+/* ── SECTIONS ─────────────────────────────────────────────────────── */
+section{padding:1rem .75rem .25rem;scroll-margin-top:170px}
+section.hidden{display:none}
+h2{
+  font-size:.92rem;font-weight:600;color:var(--accent2);
+  margin-bottom:.75rem;display:flex;align-items:center;gap:.4rem
+}
+.sec-name{flex:1}
+.sec-cnt{
+  background:var(--bdr);color:var(--muted);
+  padding:.1rem .4rem;border-radius:999px;font-size:.65rem;font-weight:400
+}
+
+/* ── GRID ──────────────────────────────────────────────────────────── */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(105px,1fr));
+  gap:.5rem;
+}
+@media(max-width:340px){.grid{grid-template-columns:repeat(3,1fr);gap:.4rem}}
+
+/* ── CARD ──────────────────────────────────────────────────────────── */
+.card{
+  position:relative;border-radius:var(--r);overflow:hidden;
+  background:var(--surf);border:1px solid var(--bdr);
+  display:flex;flex-direction:column;transition:border-color .15s,opacity .2s
+}
+.card.got{border-color:var(--green);background:rgba(34,197,94,.09);opacity:.55}
+.card.search-hide,.card.filter-hide{display:none}
+
+.card-img-wrap{position:relative;display:block;text-decoration:none;flex-shrink:0}
+.card-img-wrap img{
+  width:100%;aspect-ratio:63/88;object-fit:cover;display:block;background:var(--bdr)
+}
+.got-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:2.8rem;color:var(--green);background:rgba(0,0,0,.42);
+  opacity:0;transition:opacity .15s;pointer-events:none;
+  text-shadow:0 0 14px rgba(34,197,94,.6)
+}
+.card.got .got-overlay{opacity:1}
+
+.img-placeholder{
+  width:100%;aspect-ratio:63/88;background:var(--bdr);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--muted);font-size:.55rem;text-align:center;padding:.3rem;
+  cursor:pointer;transition:background .15s
+}
+.img-placeholder:hover{background:var(--surf2)}
+
+.card-body{padding:.28rem .32rem .32rem;flex:1;display:flex;flex-direction:column;gap:.18rem}
+.card-name{
+  font-size:.58rem;font-weight:600;line-height:1.25;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden
+}
+.card-set{font-size:.55rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-row{display:flex;align-items:center;justify-content:space-between;gap:.15rem;margin-top:auto;padding-top:.15rem}
+
+.price{font-size:.62rem;font-weight:700;color:var(--green);white-space:nowrap}
+.price.foil{color:var(--foil)}
+.price.none{color:var(--muted);font-size:.58rem}
+.price.loading{color:var(--muted);font-size:.58rem;animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+.got-btn{
+  flex-shrink:0;width:1.4rem;height:1.4rem;
+  background:var(--surf2);border:1px solid var(--bdr);
+  color:var(--muted);font-size:.65rem;border-radius:50%;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .12s;padding:0
+}
+.got-btn:active{transform:scale(.85)}
+.card.got .got-btn{background:var(--green);border-color:var(--green);color:#fff}
+
+/* ── BADGES ────────────────────────────────────────────────────────── */
+.badge{
+  position:absolute;z-index:2;font-size:.56rem;font-weight:700;
+  padding:.08rem .28rem;border-radius:999px;line-height:1
+}
+.badge.qty{top:4px;right:4px;background:var(--accent);color:#fff}
+.badge.foil{top:4px;left:4px;background:var(--foil);color:#111}
+
+/* ── SETTINGS MODAL ────────────────────────────────────────────────── */
+.modal-bg{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:600;
+  align-items:flex-end;justify-content:center;
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:var(--surf);border-radius:16px 16px 0 0;
+  padding:1.2rem 1.2rem calc(env(safe-area-inset-bottom,0px) + 1.5rem);
+  width:100%;max-width:500px;max-height:85dvh;overflow-y:auto;
+}
+.modal h3{font-size:1rem;font-weight:600;margin-bottom:1rem;color:var(--accent2)}
+.setting-row{display:flex;flex-direction:column;gap:.3rem;margin-bottom:1rem}
+.setting-row label{font-size:.78rem;color:var(--muted)}
+.setting-row select,.setting-row input[type=number]{
+  background:var(--bg);border:1px solid var(--bdr);border-radius:8px;
+  color:var(--text);font-size:.88rem;padding:.4rem .6rem;outline:none;
+  -webkit-appearance:none;width:100%
+}
+.setting-row .note{font-size:.68rem;color:var(--muted);line-height:1.5}
+.setting-row .note a{color:var(--accent2);text-decoration:none}
+.modal-btns{display:flex;gap:.5rem;margin-top:.5rem}
+.btn{
+  flex:1;padding:.55rem;border-radius:9px;font-size:.85rem;font-weight:600;
+  cursor:pointer;border:none;transition:background .12s
+}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.secondary{background:var(--bdr);color:var(--text)}
+.btn.danger{background:rgba(239,68,68,.15);border:1px solid var(--red);color:var(--red)}
+
+/* ── SYNC CODE UI ───────────────────────────────────────────────────── */
+.sync-code-row{
+  display:flex;align-items:center;gap:.4rem;
+  background:var(--bg);border:1px solid var(--bdr);border-radius:8px;
+  padding:.32rem .6rem;
+}
+.sync-code-row code{
+  flex:1;font-family:ui-monospace,monospace;font-size:.96rem;
+  letter-spacing:.1em;color:var(--accent2);
+}
+.sync-copy-btn{
+  background:transparent;border:none;cursor:pointer;
+  font-size:.85rem;padding:.1rem .2rem;color:var(--muted);
+}
+.sync-input-row{display:flex;gap:.3rem;margin-top:.35rem}
+.sync-input-row input{
+  flex:1;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;
+  color:var(--text);font-size:.88rem;padding:.35rem .6rem;outline:none;
+  text-transform:uppercase;letter-spacing:.06em;
+}
+.sync-input-row input:focus{border-color:var(--accent)}
+.sync-apply-btn{
+  background:var(--accent);color:#fff;border:none;border-radius:8px;
+  padding:.35rem .85rem;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;
+}
+
+/* ── EDITION PICKER ─────────────────────────────────────────────────── */
+.ed-modal .modal{padding:1.2rem}
+.ed-modal h3{font-size:.9rem;margin-bottom:.6rem}
+.ed-list{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;max-height:60dvh;overflow-y:auto}
+.ed-item{
+  display:flex;align-items:center;gap:.4rem;
+  background:var(--bg);border:1px solid var(--bdr);border-radius:8px;
+  padding:.4rem .5rem;cursor:pointer;transition:border-color .12s
+}
+.ed-item:active{border-color:var(--accent)}
+.ed-item img{width:36px;aspect-ratio:63/88;object-fit:cover;border-radius:3px;background:var(--bdr)}
+.ed-item-name{font-size:.62rem;line-height:1.3}
+.ed-item-set{font-size:.56rem;color:var(--muted)}
+
+/* ── SCROLL TO TOP ───────────────────────────────────────────────────── */
+#totop{
+  position:fixed;bottom:calc(env(safe-area-inset-bottom,0px) + 1.2rem);right:1rem;
+  width:2.4rem;height:2.4rem;background:var(--accent);color:#fff;border:none;
+  border-radius:50%;font-size:1rem;cursor:pointer;
+  display:none;align-items:center;justify-content:center;z-index:400;
+  box-shadow:0 2px 14px rgba(0,0,0,.5)
+}
+#totop.show{display:flex}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ UPLOAD SCREEN ══════════════════ -->
+<div id="upload-screen">
+  <h1>🃏 MTG Wunschliste</h1>
+  <p>CSV von Cardmarket hochladen — Bilder und Preise laden automatisch via Scryfall.</p>
+  <div class="drop-zone" id="drop-zone">
+    <input type="file" id="csv-input" accept=".csv">
+    <div class="icon">📄</div>
+    <p><strong>CSV-Datei auswählen</strong></p>
+    <p>oder hierhin ziehen</p>
+  </div>
+  <p class="hint">
+    Export über die <strong>Cardmarket Helper</strong> Browser-Extension.<br>
+    <a href="https://chrome.google.com/webstore" target="_blank">→ Zur Extension</a>
+  </p>
+</div>
+
+<!-- ══════════════════ PROGRESS SCREEN ══════════════════ -->
+<div id="progress-screen">
+  <div class="prog-title">Lade Kartendaten…</div>
+  <div class="prog-sub" id="prog-sub">CSV wird gelesen…</div>
+  <div class="prog-bar-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+</div>
+
+<!-- ══════════════════ APP SCREEN ══════════════════ -->
+<div id="app-screen">
+  <header id="app-header">
+    <div class="hd-row">
+      <h1>🃏 MTG Wunschliste</h1>
+      <span class="hd-info" id="hd-info"></span>
+      <span id="sync-dot" class="sync-dot" title="Sync-Status">●</span>
+      <button class="icon-btn" id="settings-btn" title="Einstellungen">⚙️</button>
+      <button class="icon-btn" id="reload-btn" title="Neue CSV laden">↑ CSV</button>
+    </div>
+    <div class="search-wrap">
+      <span class="search-ico">🔍</span>
+      <input id="search" type="search" placeholder="Karte oder Set suchen…"
+             autocorrect="off" autocapitalize="off" spellcheck="false">
+    </div>
+  </header>
+
+  <div class="filter-bar" id="filter-bar">
+    <button class="pill active" data-filter="all">Alle</button>
+    <button class="pill" data-filter="missing">Noch fehlen</button>
+    <button class="pill" data-filter="got">Bereits gekauft</button>
+  </div>
+
+  <nav id="nav-bar" class="nav-bar"></nav>
+  <main id="main-content"></main>
+</div>
+
+<!-- ══════════════════ SETTINGS MODAL ══════════════════ -->
+<div class="modal-bg" id="settings-modal">
+  <div class="modal">
+    <h3>⚙️ Einstellungen</h3>
+
+    <div class="setting-row">
+      <label>Cardmarket Verkäufer-Land</label>
+      <select id="setting-country">
+        <option value="">Kein Filter</option>
+        <option value="1">Österreich (1)</option>
+        <option value="2">Belgien (2)</option>
+        <option value="3">Bulgarien (3)</option>
+        <option value="4">Kroatien (4)</option>
+        <option value="5">Zypern (5)</option>
+        <option value="6">Tschechien (6)</option>
+        <option value="7">Dänemark (7)</option>
+        <option value="8">Estland (8)</option>
+        <option value="9">Finnland (9)</option>
+        <option value="10">Frankreich (10)</option>
+        <option value="11">Deutschland (11)</option>
+        <option value="12">Griechenland (12)</option>
+        <option value="13">Ungarn (13)</option>
+        <option value="14">Irland (14)</option>
+        <option value="15">Italien (15)</option>
+        <option value="16">Lettland (16)</option>
+        <option value="17">Litauen (17)</option>
+        <option value="18">Luxemburg (18)</option>
+        <option value="19">Malta (19)</option>
+        <option value="20">Niederlande (20)</option>
+        <option value="21">Norwegen (21)</option>
+        <option value="22">Polen (22)</option>
+        <option value="23">Portugal (23)</option>
+        <option value="24">Rumänien (24)</option>
+        <option value="25">Slowakei (25)</option>
+        <option value="26">Slowenien (26)</option>
+        <option value="27">Spanien (27)</option>
+        <option value="28">Schweden (28)</option>
+        <option value="29">Schweiz (29)</option>
+        <option value="30">UK (30)</option>
+      </select>
+      <span class="note">
+        Deutschland hat vermutlich Code 11.
+        <a href="#" id="test-country-link">Testlink öffnen →</a>
+      </span>
+    </div>
+
+    <div class="setting-row">
+      <label>Kartensprache (Cardmarket-Links)</label>
+      <select id="setting-language">
+        <option value="">Kein Filter</option>
+        <option value="1" selected>Englisch</option>
+        <option value="2">Französisch</option>
+        <option value="3">Deutsch</option>
+        <option value="1,3">Englisch + Deutsch</option>
+        <option value="1,7">Englisch + Japanisch</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label>Mindest-Zustand</label>
+      <select id="setting-condition">
+        <option value="">Kein Filter</option>
+        <option value="2" selected>Good (GD)</option>
+        <option value="3">Light Played (LP)</option>
+        <option value="4">Excellent (EX)</option>
+        <option value="5">Near Mint (NM)</option>
+      </select>
+    </div>
+
+    <!-- ── SYNC ── -->
+    <div class="setting-row">
+      <label>🔄 Sync-Code (Mac ↔ iPhone)</label>
+      <div class="sync-code-row">
+        <code id="sync-code-display">????-????</code>
+        <button class="sync-copy-btn" onclick="copySyncKey()" title="Kopieren">📋</button>
+      </div>
+      <div class="sync-input-row">
+        <input type="text" id="sync-code-input"
+               placeholder="Anderen Code eingeben…" maxlength="9"
+               autocapitalize="characters" autocorrect="off" spellcheck="false">
+        <button class="sync-apply-btn" onclick="useSyncCode()">Übernehmen</button>
+      </div>
+      <span class="note">
+        Mac-Code auf dem iPhone eingeben → Seite neu laden → automatisch synchronisiert.
+        Jede Änderung (CSV, Gekauft-Status) wird sofort gespeichert.
+      </span>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn secondary" id="settings-close">Schließen</button>
+      <button class="btn danger" id="clear-data-btn">Daten löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ EDITION PICKER MODAL ══════════════════ -->
+<div class="modal-bg ed-modal" id="ed-modal">
+  <div class="modal">
+    <h3 id="ed-modal-title">Andere Edition wählen</h3>
+    <div class="ed-list" id="ed-list"></div>
+    <div class="modal-btns" style="margin-top:.8rem">
+      <button class="btn secondary" id="ed-modal-close">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<button id="totop">↑</button>
+
+<script>
+'use strict';
+
+// ── CONSTANTS ──────────────────────────────────────────────────────────────
+const STORE_CSV      = 'mtg-csv-v1';
+const STORE_GOT      = 'mtg-got-v1';
+const STORE_SCRY     = 'mtg-scryfall-v2';
+const STORE_SETT     = 'mtg-settings-v1';
+const STORE_SYNC_KEY = 'mtg-sync-key';
+const SYNC_URL       = '/api/sync';
+const SCRY_BATCH     = 'https://api.scryfall.com/cards/collection';
+const SCRY_NAMED     = 'https://api.scryfall.com/cards/named?fuzzy=';
+const SCRY_SEARCH    = 'https://api.scryfall.com/cards/search?q=';
+const BATCH_SIZE     = 75;
+const BATCH_DELAY    = 120;
+
+const PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='223' height='310'%3E%3Crect width='223' height='310' rx='12' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-size='11' font-family='sans-serif'%3Ekein Bild%3C/text%3E%3C/svg%3E";
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let groups        = {};
+let scryfallCache = {};
+let got           = new Set();
+let settings      = { country: '11', language: '1', condition: '2' };
+let activeFilter  = 'all';
+let syncKey       = null;
+let syncTimer     = null;
+
+// ── UTILS ──────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const qs  = (sel, el=document) => el.querySelector(sel);
+const qsa = (sel, el=document) => [...el.querySelectorAll(sel)];
+
+function ls_get(key, fallback=null) {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch { return fallback; }
+}
+function ls_set(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+
+function cleanVal(v) {
+  if (!v) return '';
+  v = v.trim().replace(/^"|"$/g, '');
+  const m1 = v.match(/^=""(.*)""$/);  if (m1) return m1[1];
+  const m2 = v.match(/^="(.*)"$/);    if (m2) return m2[1];
+  return v;
+}
+
+function cleanName(name) {
+  let n = name.replace(/\s*\(V\.\d+\)\s*$/i, '').trim();
+  if (n.includes(' // ')) n = n.split(' // ')[0].trim();
+  return n;
+}
+
+function cardId(card) {
+  return (card.name + '|' + card.expansion).toLowerCase().replace(/[^a-z0-9|]/g,'').slice(0,60);
+}
+
+function buildCmUrl(rawUrl) {
+  const base = rawUrl.split('?')[0];
+  const params = [];
+  if (settings.language)  params.push('language=' + settings.language);
+  if (settings.country)   params.push('sellerCountry=' + settings.country);
+  if (settings.condition) params.push('minCondition=' + settings.condition);
+  return base + (params.length ? '?' + params.join('&') : '');
+}
+
+function groupSortKey(name) {
+  if (name.startsWith('ZZZ')) return '3' + name;
+  if (name.startsWith('XXX') || name.startsWith('XX')) return '2' + name;
+  return '0' + name;
+}
+
+// ── SYNC ───────────────────────────────────────────────────────────────────
+function genSyncKey() {
+  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let k = '';
+  for (let i = 0; i < 8; i++) {
+    if (i === 4) k += '-';
+    k += c[Math.floor(Math.random() * c.length)];
+  }
+  return k;
+}
+
+function loadSyncKey() {
+  syncKey = ls_get(STORE_SYNC_KEY, null);
+  if (!syncKey) { syncKey = genSyncKey(); ls_set(STORE_SYNC_KEY, syncKey); }
+}
+
+function updateSyncCodeUI() {
+  const el = $('sync-code-display');
+  if (el) el.textContent = syncKey || '????-????';
+}
+
+function setSyncStatus(s) {
+  const dot = $('sync-dot');
+  if (!dot) return;
+  const col = { idle:'var(--muted)', saving:'var(--foil)', saved:'var(--green)', error:'var(--red)' }[s] || 'var(--muted)';
+  const tip = { idle:'Sync inaktiv', saving:'Speichert…', saved:'Synchronisiert ✓', error:'Sync-Fehler (offline?)' }[s] || '';
+  dot.style.color = col;
+  dot.title = tip;
+}
+
+async function syncLoad() {
+  if (!syncKey) return null;
+  try {
+    setSyncStatus('saving');
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 6000);
+    const r = await fetch(`${SYNC_URL}?key=${encodeURIComponent(syncKey)}`, { signal: controller.signal });
+    clearTimeout(t);
+    if (r.status === 404) { setSyncStatus('idle'); return null; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const d = await r.json();
+    setSyncStatus(d ? 'saved' : 'idle');
+    return d;
+  } catch (e) {
+    setSyncStatus(e.name === 'AbortError' ? 'idle' : 'error');
+    return null;
+  }
+}
+
+async function syncSave(data) {
+  if (!syncKey) return;
+  setSyncStatus('saving');
+  try {
+    const r = await fetch(SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!r.ok) throw new Error();
+    setSyncStatus('saved');
+  } catch {
+    setSyncStatus('error');
+  }
+}
+
+function debouncedSyncSave() {
+  clearTimeout(syncTimer);
+  setSyncStatus('saving');
+  syncTimer = setTimeout(() => {
+    syncSave({ groups, scryfall: scryfallCache, got: [...got] });
+  }, 1500);
+}
+
+function copySyncKey() {
+  if (!syncKey) return;
+  navigator.clipboard?.writeText(syncKey).catch(() => {});
+  const el = $('sync-code-display');
+  if (el) {
+    const prev = el.textContent;
+    el.textContent = 'Kopiert!';
+    setTimeout(() => el.textContent = prev, 1500);
+  }
+}
+window.copySyncKey = copySyncKey;
+
+async function useSyncCode() {
+  const inp = $('sync-code-input');
+  if (!inp) return;
+  const raw = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (raw.length !== 8) { alert('Code muss 8 Zeichen haben (z.B. ABCD-1234)'); return; }
+  const newKey = raw.slice(0, 4) + '-' + raw.slice(4);
+  if (newKey === syncKey) { alert('Das ist bereits dein Code.'); return; }
+  syncKey = newKey;
+  ls_set(STORE_SYNC_KEY, syncKey);
+  updateSyncCodeUI();
+  inp.value = '';
+  if (confirm(`Code auf "${newKey}" gesetzt.\nSeite neu laden um Daten zu synchronisieren?`)) {
+    location.reload();
+  }
+}
+window.useSyncCode = useSyncCode;
+
+// ── CSV PARSER ──────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const lines = text.split(/\r?\n/).filter(l => l.trim());
+  if (!lines.length) throw new Error('CSV leer');
+
+  const header = lines[0].split(';').map(h => cleanVal(h).replace(/^﻿/, ''));
+  const idx = k => header.findIndex(h => h === k);
+
+  const iName  = idx('ProductName');
+  const iList  = idx('WantListName');
+  const iExp   = idx('Expansion');
+  const iQty   = idx('Quantity');
+  const iFoil  = idx('IsFoil');
+  const iUrl   = idx('ProductUrl');
+
+  if (iName < 0 || iList < 0) throw new Error('Spalten nicht gefunden (ProductName / WantListName)');
+
+  const result = {};
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(';');
+    const name = cleanVal(cols[iName] || '');
+    if (!name) continue;
+    const list = cleanVal(cols[iList] || '') || 'Sonstige';
+    const card = {
+      name,
+      expansion: iExp  >= 0 ? cleanVal(cols[iExp]  || '') : '',
+      qty:       iQty  >= 0 ? parseInt(cleanVal(cols[iQty] || '1')) || 1 : 1,
+      foil:      iFoil >= 0 ? cleanVal(cols[iFoil]  || '').toLowerCase() === 'yes' : false,
+      rawUrl:    iUrl  >= 0 ? cleanVal(cols[iUrl]   || '') : '',
+    };
+    (result[list] = result[list] || []).push(card);
+  }
+  return result;
+}
+
+// ── SCRYFALL ────────────────────────────────────────────────────────────────
+async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function scryBatch(names) {
+  try {
+    const resp = await fetch(SCRY_BATCH, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifiers: names.map(n => ({ name: n })) })
+    });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return data.data || [];
+  } catch { return []; }
+}
+
+async function scrySingle(name) {
+  try {
+    const resp = await fetch(SCRY_NAMED + encodeURIComponent(name));
+    if (!resp.ok) return null;
+    return await resp.json();
+  } catch { return null; }
+}
+
+function extractScryData(card) {
+  const img = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || '';
+  const p   = card.prices || {};
+  return {
+    img,
+    eur:        p.eur      ? parseFloat(p.eur)      : null,
+    eur_foil:   p.eur_foil ? parseFloat(p.eur_foil) : null,
+    name:       card.name || '',
+    set_name:   card.set_name || '',
+    set:        card.set || '',
+    prints_url: card.prints_search_uri || null,
+  };
+}
+
+async function loadScryfallData(uniqueNames, onProgress) {
+  scryfallCache = ls_get(STORE_SCRY, {});
+  const missing = uniqueNames.filter(n => !scryfallCache[n]);
+
+  if (!missing.length) { onProgress(1, 'Cache geladen'); return; }
+
+  const batches = [];
+  for (let i = 0; i < missing.length; i += BATCH_SIZE)
+    batches.push(missing.slice(i, i + BATCH_SIZE));
+
+  for (let bi = 0; bi < batches.length; bi++) {
+    const batch = batches[bi];
+    onProgress((bi / batches.length) * 0.9, `Batch ${bi+1}/${batches.length}…`);
+
+    const results = await scryBatch(batch);
+    const found   = new Set();
+    for (const card of results) {
+      const d = extractScryData(card);
+      scryfallCache[card.name] = d;
+      found.add(card.name);
+    }
+
+    const notFound = batch.filter(n => !found.has(n));
+    for (const name of notFound) {
+      const card = await scrySingle(name);
+      if (card) {
+        const d = extractScryData(card);
+        scryfallCache[card.name] = d;
+        scryfallCache[name]      = d;
+      } else {
+        scryfallCache[name] = { img: '', eur: null, eur_foil: null };
+      }
+      await sleep(50);
+    }
+
+    if (bi < batches.length - 1) await sleep(BATCH_DELAY);
+  }
+
+  ls_set(STORE_SCRY, scryfallCache);
+  onProgress(1, 'Fertig');
+}
+
+function getScryData(name, foil=false) {
+  const clean = cleanName(name);
+  const d = scryfallCache[name] || scryfallCache[clean] ||
+    Object.values(scryfallCache).find(v => v?.name === clean || v?.name === name);
+  if (!d) return { img: PLACEHOLDER, price: null };
+  const price = foil ? (d.eur_foil ?? d.eur) : d.eur;
+  return { img: d.img || PLACEHOLDER, price };
+}
+
+// ── RENDER ──────────────────────────────────────────────────────────────────
+function renderCard(card) {
+  const cid   = cardId(card);
+  const clean = cleanName(card.name);
+  const sd    = getScryData(card.name, card.foil);
+  const url   = buildCmUrl(card.rawUrl);
+  const isGot = got.has(cid);
+  const esc   = s => s.replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;');
+
+  const priceStr = sd.price != null
+    ? `<span class="price${card.foil?' foil':''}">${sd.price.toFixed(2)} €</span>`
+    : `<span class="price none">–</span>`;
+
+  const badgeQty  = card.qty > 1 ? `<span class="badge qty">×${card.qty}</span>` : '';
+  const badgeFoil = card.foil    ? `<span class="badge foil">✦</span>` : '';
+
+  const imgHtml = sd.img && sd.img !== PLACEHOLDER
+    ? `<img src="${esc(sd.img)}" alt="${esc(card.name)}" loading="lazy"
+           onerror="this.onerror=null;this.parentElement.innerHTML=altPlaceholder(this.dataset.name)"
+           data-name="${esc(card.name)}">`
+    : `<div class="img-placeholder" onclick="openEditionPicker('${esc(clean)}')" title="Andere Edition suchen">
+         🔍 Nicht gefunden<br>tippen für andere Edition
+       </div>`;
+
+  return `<div class="card${isGot?' got':''}" data-id="${cid}" data-name="${esc(card.name)}" data-set="${esc(card.expansion)}">
+  ${badgeQty}${badgeFoil}
+  <a class="card-img-wrap" href="${esc(url)}" target="_blank" rel="noopener">
+    ${imgHtml}
+    <div class="got-overlay">✓</div>
+  </a>
+  <div class="card-body">
+    <div class="card-name">${esc(card.name)}</div>
+    <div class="card-set">${esc(card.expansion)}</div>
+    <div class="card-row">
+      ${priceStr}
+      <button class="got-btn" onclick="toggleGot(this.closest('.card'))" title="Als gekauft markieren">✓</button>
+    </div>
+  </div>
+</div>`;
+}
+
+function altPlaceholder(name) {
+  const cleanN = (name||'').replace(/"/g,'&quot;');
+  return `<div class="img-placeholder" onclick="openEditionPicker('${cleanN}')" title="Andere Edition suchen">🔍 Nicht gefunden<br>tippen für andere Edition</div>`;
+}
+window.altPlaceholder = altPlaceholder;
+
+function renderAll() {
+  const main   = $('main-content');
+  const nav    = $('nav-bar');
+  const sorted = Object.keys(groups).sort((a,b) => groupSortKey(a).localeCompare(groupSortKey(b)));
+
+  nav.innerHTML = sorted.map(g => {
+    const slug = g.toLowerCase().replace(/[^a-z0-9]/g,'-');
+    return `<a class="pill" href="#${slug}">${g}<span class="cnt">${groups[g].length}</span></a>`;
+  }).join('');
+
+  main.innerHTML = sorted.map(g => {
+    const slug  = g.toLowerCase().replace(/[^a-z0-9]/g,'-');
+    const cards = groups[g].map(renderCard).join('\n');
+    return `<section id="${slug}" data-list="${g}" data-total="${groups[g].length}">
+  <h2><span class="sec-name">${g}</span><span class="sec-cnt">${groups[g].length}</span></h2>
+  <div class="grid">${cards}</div>
+</section>`;
+  }).join('\n');
+
+  qsa('#nav-bar a').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault();
+    const el = document.getElementById(a.getAttribute('href').slice(1));
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  }));
+
+  updateHeaderInfo();
+  applyFilter();
+  updateSectionCounts();
+}
+
+function updateHeaderInfo() {
+  const total  = qsa('.card').length;
+  const gotCnt = got.size;
+  $('hd-info').textContent = `${total - gotCnt} fehlen · ${gotCnt} ✓`;
+}
+
+function updateSectionCounts() {
+  qsa('section').forEach(sec => {
+    const visible = qsa('.card:not(.search-hide):not(.filter-hide)', sec).length;
+    sec.classList.toggle('hidden', visible === 0);
+    const cnt = qs('.sec-cnt', sec);
+    if (cnt) cnt.textContent = visible;
+  });
+}
+
+// ── FILTER + SEARCH ─────────────────────────────────────────────────────────
+function applyFilter() {
+  qsa('.card:not(.search-hide)').forEach(card => {
+    const isGot = got.has(card.dataset.id);
+    let hide = false;
+    if (activeFilter === 'missing') hide = isGot;
+    if (activeFilter === 'got')     hide = !isGot;
+    card.classList.toggle('filter-hide', hide);
+  });
+  updateSectionCounts();
+  updateHeaderInfo();
+}
+
+$('search').addEventListener('input', function() {
+  const q = this.value.toLowerCase().trim();
+  qsa('.card').forEach(card => {
+    const match = !q ||
+      card.dataset.name.toLowerCase().includes(q) ||
+      card.dataset.set.toLowerCase().includes(q);
+    card.classList.toggle('search-hide', !match);
+  });
+  applyFilter();
+});
+
+qsa('#filter-bar .pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    qsa('#filter-bar .pill').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    applyFilter();
+  });
+});
+
+// ── GOT TOGGLE ──────────────────────────────────────────────────────────────
+function toggleGot(card) {
+  const id = card.dataset.id;
+  if (got.has(id)) got.delete(id); else got.add(id);
+  ls_set(STORE_GOT, [...got]);
+  card.classList.toggle('got', got.has(id));
+  const btn = qs('.got-btn', card);
+  if (btn) { btn.style.transform='scale(.8)'; setTimeout(()=>btn.style.transform='',150); }
+  applyFilter();
+  updateHeaderInfo();
+  debouncedSyncSave();
+}
+window.toggleGot = toggleGot;
+
+// ── EDITION PICKER ──────────────────────────────────────────────────────────
+async function openEditionPicker(cardName) {
+  $('ed-modal-title').textContent = cardName;
+  const list = $('ed-list');
+  list.innerHTML = '<div style="color:var(--muted);font-size:.8rem;padding:.5rem">Lade Editionen…</div>';
+  $('ed-modal').classList.add('open');
+
+  try {
+    const url  = SCRY_SEARCH + encodeURIComponent(`!"${cardName}" include:extras`);
+    const resp = await fetch(url);
+    const data = await resp.json();
+    const cards = (data.data || []).slice(0, 20);
+
+    if (!cards.length) {
+      list.innerHTML = '<div style="color:var(--muted);font-size:.8rem;padding:.5rem">Keine Ergebnisse</div>';
+      return;
+    }
+
+    list.innerHTML = cards.map(c => {
+      const img   = c.image_uris?.small || c.card_faces?.[0]?.image_uris?.small || PLACEHOLDER;
+      const price = c.prices?.eur ? `${parseFloat(c.prices.eur).toFixed(2)} €` : '–';
+      return `<div class="ed-item" onclick="pickEdition('${(c.name).replace(/'/g,"\\'")}','${img}','${c.set_name}','${price}')">
+        <img src="${img}" alt="${c.name}" loading="lazy">
+        <div>
+          <div class="ed-item-name">${c.set_name}</div>
+          <div class="ed-item-set">${c.set.toUpperCase()} · ${price}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch {
+    list.innerHTML = '<div style="color:var(--muted);font-size:.8rem;padding:.5rem">Fehler beim Laden</div>';
+  }
+}
+window.openEditionPicker = openEditionPicker;
+
+function pickEdition(name, imgUrl, setName, price) {
+  qsa(`.card[data-name="${CSS.escape(name)}"] .img-placeholder`).forEach(ph => {
+    ph.outerHTML = `<img src="${imgUrl}" alt="${name}" loading="lazy"
+      onerror="this.onerror=null;this.parentElement.innerHTML=altPlaceholder('${name.replace(/'/g,"\\'")}')"
+      data-name="${name}">`;
+  });
+  const clean = cleanName(name);
+  if (!scryfallCache[name]) scryfallCache[name] = {};
+  scryfallCache[name].img = imgUrl;
+  ls_set(STORE_SCRY, scryfallCache);
+  $('ed-modal').classList.remove('open');
+}
+window.pickEdition = pickEdition;
+
+$('ed-modal-close').addEventListener('click', () => $('ed-modal').classList.remove('open'));
+$('ed-modal').addEventListener('click', e => { if (e.target === $('ed-modal')) $('ed-modal').classList.remove('open'); });
+
+// ── SETTINGS ────────────────────────────────────────────────────────────────
+function loadSettings() {
+  const s  = ls_get(STORE_SETT, {});
+  settings = { country: s.country ?? '11', language: s.language ?? '1', condition: s.condition ?? '2' };
+  $('setting-country').value   = settings.country;
+  $('setting-language').value  = settings.language;
+  $('setting-condition').value = settings.condition;
+}
+function saveSettings() {
+  settings.country   = $('setting-country').value;
+  settings.language  = $('setting-language').value;
+  settings.condition = $('setting-condition').value;
+  ls_set(STORE_SETT, settings);
+}
+
+$('settings-btn').addEventListener('click', () => $('settings-modal').classList.add('open'));
+$('settings-close').addEventListener('click', () => { saveSettings(); $('settings-modal').classList.remove('open'); });
+$('settings-modal').addEventListener('click', e => {
+  if (e.target === $('settings-modal')) { saveSettings(); $('settings-modal').classList.remove('open'); }
+});
+$('clear-data-btn').addEventListener('click', () => {
+  if (!confirm('Alle Daten löschen (CSV, Cache, Gekauft-Status, Sync-Code)?')) return;
+  [STORE_CSV, STORE_GOT, STORE_SCRY, STORE_SYNC_KEY].forEach(k => localStorage.removeItem(k));
+  location.reload();
+});
+
+$('test-country-link').addEventListener('click', e => {
+  e.preventDefault();
+  const code = $('setting-country').value;
+  window.open(`https://www.cardmarket.com/en/Magic/Products/Singles/Foundations/Lightning-Bolt?language=1&sellerCountry=${code}`, '_blank');
+});
+
+// ── CSV UPLOAD ──────────────────────────────────────────────────────────────
+async function processCSV(text) {
+  $('upload-screen').style.display    = 'none';
+  $('progress-screen').style.display = 'flex';
+
+  setProgress(0.05, 'CSV wird gelesen…');
+  await sleep(50);
+
+  try {
+    groups = parseCSV(text);
+  } catch(e) {
+    alert('CSV-Fehler: ' + e.message);
+    $('upload-screen').style.display    = 'flex';
+    $('progress-screen').style.display = 'none';
+    return;
+  }
+
+  const allCards    = Object.values(groups).flat();
+  const uniqueNames = [...new Set(allCards.map(c => cleanName(c.name)))];
+
+  setProgress(0.1, `${uniqueNames.length} einzigartige Karten gefunden…`);
+  ls_set(STORE_CSV, text);
+
+  await loadScryfallData(uniqueNames, (frac, msg) => setProgress(0.1 + frac * 0.85, msg));
+
+  setProgress(0.98, 'Seite wird aufgebaut…');
+  await sleep(50);
+
+  showApp();
+
+  syncSave({ groups, scryfall: scryfallCache, got: [...got] });
+}
+
+function setProgress(frac, msg) {
+  $('prog-bar').style.width = Math.round(frac * 100) + '%';
+  $('prog-sub').textContent  = msg;
+}
+
+function handleFile(file) {
+  if (!file || !file.name.endsWith('.csv')) { alert('Bitte eine .csv-Datei auswählen'); return; }
+  const reader = new FileReader();
+  reader.onload = e => processCSV(e.target.result);
+  reader.readAsText(file, 'utf-8');
+}
+
+$('csv-input').addEventListener('change', e => handleFile(e.target.files[0]));
+
+const dz = $('drop-zone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  handleFile(e.dataTransfer.files[0]);
+});
+
+$('reload-btn').addEventListener('click', () => {
+  localStorage.removeItem(STORE_CSV);
+  location.reload();
+});
+
+// ── SHOW APP ─────────────────────────────────────────────────────────────────
+function showApp() {
+  $('progress-screen').style.display = 'none';
+  $('app-screen').style.display      = 'flex';
+  $('app-screen').style.flexDirection = 'column';
+
+  got = new Set(ls_get(STORE_GOT, []));
+  renderAll();
+
+  requestAnimationFrame(() => {
+    const hh = $('app-header').getBoundingClientRect().height;
+    document.documentElement.style.setProperty('--hdr-h', hh + 'px');
+  });
+}
+
+// ── SCROLL TO TOP ─────────────────────────────────────────────────────────────
+const totop = $('totop');
+window.addEventListener('scroll', () => totop.classList.toggle('show', scrollY > 500), { passive:true });
+totop.addEventListener('click', () => window.scrollTo({ top:0, behavior:'smooth' }));
+
+// ── BOOT ─────────────────────────────────────────────────────────────────────
+loadSettings();
+loadSyncKey();
+updateSyncCodeUI();
+
+(async () => {
+  const serverData = await syncLoad();
+  if (serverData?.groups && Object.keys(serverData.groups).length) {
+    groups        = serverData.groups;
+    scryfallCache = serverData.scryfall || {};
+    got           = new Set(serverData.got || []);
+    ls_set(STORE_SCRY, scryfallCache);
+    ls_set(STORE_GOT,  [...got]);
+    $('upload-screen').style.display = 'none';
+    showApp();
+    return;
+  }
+
+  const savedCSV = ls_get(STORE_CSV, null);
+  if (savedCSV) {
+    await processCSV(savedCSV);
+    return;
+  }
+
+  $('upload-screen').style.display = 'flex';
+})();
+</script>
+</body>
+</html>
