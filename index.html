@@ -292,6 +292,22 @@ h2{
     Export über die <strong>Cardmarket Helper</strong> Browser-Extension.<br>
     <a href="https://chrome.google.com/webstore" target="_blank">→ Zur Extension</a>
   </p>
+
+  <div style="width:100%;max-width:340px;border-top:1px solid var(--bdr);padding-top:1.2rem;display:flex;flex-direction:column;gap:.5rem">
+    <p style="font-size:.75rem;color:var(--muted);text-align:center">Bereits auf einem anderen Gerät eingerichtet?</p>
+    <div style="display:flex;gap:.4rem">
+      <input id="upload-sync-input" type="text" placeholder="Sync-Code eingeben (z.B. ABCD-1234)"
+             maxlength="9" autocapitalize="characters" autocorrect="off" spellcheck="false"
+             style="flex:1;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;
+                    color:var(--text);font-size:.85rem;padding:.4rem .6rem;outline:none;
+                    text-transform:uppercase;letter-spacing:.05em">
+      <button onclick="applyUploadSyncCode()"
+              style="background:var(--accent);color:#fff;border:none;border-radius:8px;
+                     padding:.4rem .9rem;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap">
+        Laden
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- ══════════════════ PROGRESS SCREEN ══════════════════ -->
@@ -511,7 +527,7 @@ function groupSortKey(name) {
 
 // ── SYNC ───────────────────────────────────────────────────────────────────
 function genSyncKey() {
-  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // kein 0/O, 1/I
   let k = '';
   for (let i = 0; i < 8; i++) {
     if (i === 4) k += '-';
@@ -610,6 +626,17 @@ async function useSyncCode() {
   }
 }
 window.useSyncCode = useSyncCode;
+
+function applyUploadSyncCode() {
+  const inp = document.getElementById('upload-sync-input');
+  if (!inp) return;
+  const raw = inp.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (raw.length !== 8) { alert('Code muss 8 Zeichen haben (z.B. ABCD-1234)'); return; }
+  const newKey = raw.slice(0, 4) + '-' + raw.slice(4);
+  ls_set(STORE_SYNC_KEY, newKey);
+  location.reload();
+}
+window.applyUploadSyncCode = applyUploadSyncCode;
 
 // ── CSV PARSER ──────────────────────────────────────────────────────────────
 function parseCSV(text) {
@@ -871,7 +898,7 @@ function toggleGot(card) {
   if (btn) { btn.style.transform='scale(.8)'; setTimeout(()=>btn.style.transform='',150); }
   applyFilter();
   updateHeaderInfo();
-  debouncedSyncSave();
+  debouncedSyncSave(); // ← auf Server speichern
 }
 window.toggleGot = toggleGot;
 
@@ -989,6 +1016,7 @@ async function processCSV(text) {
 
   showApp();
 
+  // CSV-Daten auf Server speichern (async, wartet nicht)
   syncSave({ groups, scryfall: scryfallCache, got: [...got] });
 }
 
@@ -1045,6 +1073,7 @@ loadSyncKey();
 updateSyncCodeUI();
 
 (async () => {
+  // 1. Erst vom Netlify-Server laden (Quelle der Wahrheit)
   const serverData = await syncLoad();
   if (serverData?.groups && Object.keys(serverData.groups).length) {
     groups        = serverData.groups;
@@ -1057,12 +1086,14 @@ updateSyncCodeUI();
     return;
   }
 
+  // 2. Fallback: localStorage CSV
   const savedCSV = ls_get(STORE_CSV, null);
   if (savedCSV) {
     await processCSV(savedCSV);
     return;
   }
 
+  // 3. Kein Daten → Upload-Screen zeigen
   $('upload-screen').style.display = 'flex';
 })();
 </script>
