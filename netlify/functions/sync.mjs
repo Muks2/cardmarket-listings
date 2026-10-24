@@ -25,7 +25,7 @@ export default async function handler(req) {
     );
   }
 
-  const store = getStore({ name: "mtg-wishlist", consistency: "strong" });
+  const store = getStore("mtg-wishlist");
 
   // ── GET: Daten laden ─────────────────────────────────────────────
   if (req.method === "GET") {
