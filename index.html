@@ -1090,6 +1090,7 @@ updateSyncCodeUI();
   const savedCSV = ls_get(STORE_CSV, null);
   if (savedCSV) {
     await processCSV(savedCSV);
+    debouncedSyncSave(); // erstmals auf Server pushen
     return;
   }
 
