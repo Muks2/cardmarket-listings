@@ -6,6 +6,8 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+// Sync key format: 4 uppercase alphanumeric + "-" + 4 uppercase alphanumeric
+// e.g. "ABCD-1234"
 const KEY_RE = /^[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 
 export default async function handler(req) {
@@ -25,6 +27,7 @@ export default async function handler(req) {
 
   const store = getStore({ name: "mtg-wishlist", consistency: "strong" });
 
+  // ── GET: Daten laden ─────────────────────────────────────────────
   if (req.method === "GET") {
     try {
       const data = await store.get(key, { type: "text" });
@@ -38,6 +41,7 @@ export default async function handler(req) {
     }
   }
 
+  // ── POST: Daten speichern ────────────────────────────────────────
   if (req.method === "POST") {
     const body = await req.text();
     if (body.length > 4_000_000) {
@@ -61,5 +65,3 @@ export default async function handler(req) {
 
   return new Response("Method not allowed", { status: 405, headers: CORS });
 }
-
-export const config = { path: "/api/sync" };
