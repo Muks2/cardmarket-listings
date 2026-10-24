@@ -1,2 +1,7 @@
 [build]
   publish = "."
+  command = "npm install"
+ 
+[functions]
+  node_bundler = "esbuild"
+ 
