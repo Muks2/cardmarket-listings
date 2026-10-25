@@ -578,7 +578,7 @@ async function syncSave(data) {
   if (!syncKey) return;
   setSyncStatus('saving');
   try {
-    const r = await fetch(SYNC_URL, {
+    const r = await fetch(`${SYNC_URL}?key=${encodeURIComponent(syncKey)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
