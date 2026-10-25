@@ -1,2 +1,2 @@
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.firebasedatabase.app https://firebasedatabase.app; img-src 'self' data: https:; font-src 'self' data:;
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.firebasedatabase.app https://firebasedatabase.app https://api.scryfall.com; img-src 'self' data: https:; font-src 'self' data:;
