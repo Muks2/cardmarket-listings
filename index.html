@@ -461,7 +461,7 @@ const STORE_GOT      = 'mtg-got-v1';
 const STORE_SCRY     = 'mtg-scryfall-v2';
 const STORE_SETT     = 'mtg-settings-v1';
 const STORE_SYNC_KEY = 'mtg-sync-key';
-const SYNC_URL       = '/.netlify/functions/sync';
+const FIREBASE_DB    = 'https://cardmarket-wants-default-rtdb.europe-west1.firebasedatabase.app';
 const SCRY_BATCH     = 'https://api.scryfall.com/cards/collection';
 const SCRY_NAMED     = 'https://api.scryfall.com/cards/named?fuzzy=';
 const SCRY_SEARCH    = 'https://api.scryfall.com/cards/search?q=';
@@ -561,9 +561,8 @@ async function syncLoad() {
     setSyncStatus('saving');
     const controller = new AbortController();
     const t = setTimeout(() => controller.abort(), 6000);
-    const r = await fetch(`${SYNC_URL}?key=${encodeURIComponent(syncKey)}`, { signal: controller.signal });
+    const r = await fetch(`${FIREBASE_DB}/wishlist/${encodeURIComponent(syncKey)}.json`, { signal: controller.signal });
     clearTimeout(t);
-    if (r.status === 404) { setSyncStatus('idle'); return null; }
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const d = await r.json();
     setSyncStatus(d ? 'saved' : 'idle');
@@ -578,8 +577,8 @@ async function syncSave(data) {
   if (!syncKey) return;
   setSyncStatus('saving');
   try {
-    const r = await fetch(`${SYNC_URL}?key=${encodeURIComponent(syncKey)}`, {
-      method: 'POST',
+    const r = await fetch(`${FIREBASE_DB}/wishlist/${encodeURIComponent(syncKey)}.json`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
