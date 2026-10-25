@@ -1021,7 +1021,7 @@ async function processCSV(text) {
   showApp();
 
   // CSV-Daten auf Server speichern (async, wartet nicht)
-  syncSave({ groups, scryfall: scryfallCache, got: [...got] });
+  syncSave({ groups, got: [...got] });
 }
 
 function setProgress(frac, msg) {
@@ -1084,6 +1084,10 @@ updateSyncCodeUI();
     got           = new Set(serverData.got || []);
     ls_set(STORE_GOT,  [...got]);
     $('upload-screen').style.display = 'none';
+    const allCards    = Object.values(groups).flat();
+    const uniqueNames = [...new Set(allCards.map(c => cleanName(c.name)))];
+    $('progress-screen').style.display = 'flex';
+    await loadScryfallData(uniqueNames, (frac, msg) => setProgress(frac, msg));
     showApp();
     return;
   }
