@@ -598,7 +598,7 @@ function debouncedSyncSave() {
   clearTimeout(syncTimer);
   setSyncStatus('saving');
   syncTimer = setTimeout(() => {
-    syncSave({ groups, scryfall: scryfallCache, got: [...got] });
+    syncSave({ groups, got: [...got] });
   }, 1500);
 }
 
@@ -718,7 +718,7 @@ function extractScryData(card) {
 
 async function loadScryfallData(uniqueNames, onProgress) {
   scryfallCache = ls_get(STORE_SCRY, {});
-  const missing = uniqueNames.filter(n => !scryfallCache[n]);
+  const missing = uniqueNames.filter(n => !scryfallCache[n] || !scryfallCache[n].img);
 
   if (!missing.length) { onProgress(1, 'Cache geladen'); return; }
 
@@ -1081,9 +1081,7 @@ updateSyncCodeUI();
   const serverData = await syncLoad();
   if (serverData?.groups && Object.keys(serverData.groups).length) {
     groups        = serverData.groups;
-    scryfallCache = serverData.scryfall || {};
     got           = new Set(serverData.got || []);
-    ls_set(STORE_SCRY, scryfallCache);
     ls_set(STORE_GOT,  [...got]);
     $('upload-screen').style.display = 'none';
     showApp();
